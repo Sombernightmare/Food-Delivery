@@ -1,5 +1,6 @@
 import 'package:bloc_pattern/bloc_pattern.dart';
 import 'package:flutter/material.dart';
+import 'package:food_delivery/bloc/provider.dart';
 import 'package:food_delivery/model/fooditem.dart';
 import 'bloc/cartListBloc.dart';
 
@@ -132,6 +133,7 @@ Widget categories() {
 }
 
 class CustomAppBar extends StatelessWidget {
+  final CartListBloc bloc = BlocProvider.getBloc<CartListBloc>();
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -140,20 +142,40 @@ class CustomAppBar extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
           Icon(Icons.menu),
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              margin: EdgeInsets.only(right: 30),
-              child: Text("Cart: " + "0"),
-              padding: EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                  color: Colors.blue[300],
-                  borderRadius: BorderRadius.circular(50)),
-            ),
+          StreamBuilder(
+            stream:  bloc.listStream,
+            builder: (context, snapshot){
+              List<FoodItem> foodItems = snapshot.data;
+              int length = foodItems != null ? foodItems.length : 0;
+
+              return buildGestureDetector(length, context, foodItems); 
+            },
           )
         ],
       ),
     );
+  }
+
+  GestureDetector buildGestureDetector(int length, BuildContext context, List<FoodItem> foodItems){
+    return GestureDetector(
+      onTap: (){
+        if(length > 0){
+          Navigator.push(
+            context, MaterialPageRoute(builder: (context) => Cart()));
+        }
+        else{
+          return;
+        }
+      },
+      child: Container(
+        margin: EdgeInsets.only(right: 30),
+        child: Text("cart: " + length.toString()),
+        padding: EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.blue[300],
+          borderRadius: BorderRadius.circular(50)),
+        ),
+      );    
   }
 }
 
@@ -219,13 +241,21 @@ class CategoryListItem extends StatelessWidget {
 
 class ItemContainer extends StatelessWidget {
   final FoodItem foodItem;
-
+  final CartListBloc bloc = BlocProvider.getBloc<CartListBloc>();
   ItemContainer({this.foodItem});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        addToCart(foodItem);
+
+        final snackBar = SnackBar(
+          content: Text("${foodItem.title} added to the cart"),
+          duration: Duration(milliseconds: 500),
+        );
+        Scaffold.of(context).showSnackBar(snackBar);
+      },
       child: Items(
           restaurant: foodItem.restaurant,
           itemName: foodItem.title,
@@ -233,6 +263,10 @@ class ItemContainer extends StatelessWidget {
           imgUrl: foodItem.imgUrl,
           leftAligned: foodItem.id % 2 == 0 ? true : false),
     );
+  }
+
+  addToCart(FoodItem foodItem){
+    bloc.addToList(foodItem);
   }
 }
 
